@@ -1,8 +1,9 @@
+const { getStreamFromURL } = global.utils;
 module.exports.config = {
  name: "pair",
  version: "1.0.1",
  hasPermssion: 0,
- credits: "𝐂𝐘𝐁𝐄𝐑 ☢️_𖣘 -𝐁𝐎𝐓 ⚠️ 𝑻𝑬𝑨𝑴_ ☢️",
+ credits: "mahim islam",
  description: "Pair two users with a fun compatibility score",
  commandCategory: "Picture",
  cooldowns: 5,
@@ -13,87 +14,31 @@ module.exports.config = {
  }
 };
 
-module.exports.onLoad = async () => {
- const { resolve } = global.nodemodule["path"];
- const { existsSync, mkdirSync } = global.nodemodule["fs-extra"];
- const { downloadFile } = global.utils;
- const dirMaterial = __dirname + `/cache/canvas/`;
- const path = resolve(__dirname, 'cache/canvas', 'pairing.png');
- if (!existsSync(dirMaterial + "canvas")) mkdirSync(dirMaterial, { recursive: true });
- if (!existsSync(path)) await downloadFile("https://i.postimg.cc/X7R3CLmb/267378493-3075346446127866-4722502659615516429-n.png", path);
-};
 
-async function makeImage({ one, two }) {
- const fs = global.nodemodule["fs-extra"];
- const path = global.nodemodule["path"];
- const axios = global.nodemodule["axios"];
- const jimp = global.nodemodule["jimp"];
- const __root = path.resolve(__dirname, "cache", "canvas");
+  onStart: async function({ event, threadsData, message, usersData }) {
+    const uidI = event.senderID;
+    const avatarUrl1 = await usersData.getAvatarUrl(uidI);
+    const name1 = await usersData.getName(uidI);
+    const threadData = await threadsData.get(event.threadID);
+    const members = threadData.members.filter(member => member.gender === "FEMALE" && member.inGroup);
 
- let pairing_img = await jimp.read(__root + "/pairing.png");
- let pathImg = __root + `/pairing_${one}_${two}.png`;
- let avatarOne = __root + `/avt_${one}.png`;
- let avatarTwo = __root + `/avt_${two}.png`;
+    
+    const randomIndex = Math.floor(Math.random() * members.length);
+    const randomMember = members[randomIndex];
+    const name2 = await usersData.getName(`${randomMember.userID}`);
+    const avatarUrl2 = await usersData.getAvatarUrl(`${randomMember.userID}`);
+    const randomNumber1 = Math.floor(Math.random() * 36) + 65;
+    const randomNumber2 = Math.floor(Math.random() * 36) + 65;
+    if (!randomMember) return message.reply('mention han');
 
- let getAvatarOne = (await axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: 'arraybuffer' })).data;
- fs.writeFileSync(avatarOne, Buffer.from(getAvatarOne, 'utf-8'));
+    message.reply({body:`•Everyone congratulates the new husband and wife:
+    ❤️${name1}💕${name2}❤️
+Love percentage: "${randomNumber1} % 🤭"
+Compatibility ratio: "${randomNumber2} % 💕"
 
- let getAvatarTwo = (await axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: 'arraybuffer' })).data;
- fs.writeFileSync(avatarTwo, Buffer.from(getAvatarTwo, 'utf-8'));
-
- let circleOne = await jimp.read(await circle(avatarOne));
- let circleTwo = await jimp.read(await circle(avatarTwo));
- pairing_img.composite(circleOne.resize(150, 150), 980, 200).composite(circleTwo.resize(150, 150), 140, 200);
-
- let raw = await pairing_img.getBufferAsync("image/png");
-
- fs.writeFileSync(pathImg, raw);
- fs.unlinkSync(avatarOne);
- fs.unlinkSync(avatarTwo);
-
- return pathImg;
-}
-
-async function circle(image) {
- const jimp = require("jimp");
- image = await jimp.read(image);
- image.circle();
- return await image.getBufferAsync("image/png");
-}
-
-module.exports.run = async function ({ api, event }) {
- const axios = require("axios");
- const fs = require("fs-extra");
- const { threadID, messageID, senderID } = event;
-
- // Match percentage
- const percentages = ['21%', '67%', '19%', '37%', '17%', '96%', '52%', '62%', '76%', '83%', '100%', '99%', '0%', '48%'];
- const matchRate = percentages[Math.floor(Math.random() * percentages.length)];
-
- // Sender info
- let senderInfo = await api.getUserInfo(senderID);
- let senderName = senderInfo[senderID].name;
-
- // Random partner
- let threadInfo = await api.getThreadInfo(threadID);
- let participants = threadInfo.participantIDs.filter(id => id !== senderID);
- let partnerID = participants[Math.floor(Math.random() * participants.length)];
- let partnerInfo = await api.getUserInfo(partnerID);
- let partnerName = partnerInfo[partnerID].name;
-
- // Mentions
- let mentions = [
- { id: senderID, tag: senderName },
- { id: partnerID, tag: partnerName }
- ];
-
- // Generate and send image
- let one = senderID, two = partnerID;
- return makeImage({ one, two }).then(path => {
- api.sendMessage({
- body: `🥰 Successful Pairing!\n💌 Wishing you two a lifetime of unexpected happiness – even with a ${matchRate} match!\n💕 Compatibility Score: ${matchRate}\nUnlikely but Unstoppable: [${senderName} + ${partnerName}]👨‍❤️‍👨`,
- mentions,
- attachment: fs.createReadStream(path)
- }, threadID, () => fs.unlinkSync(path), messageID);
- });
+Congratulations 🥳`, attachment: [
+await getStreamFromURL(`${avatarUrl1}`),
+await getStreamFromURL(`${avatarUrl2}`)
+]})
+  }
 };
