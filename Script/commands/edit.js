@@ -1,55 +1,67 @@
 const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
 
-module.exports.config = {
-  name: "edit",
-  version: "1.1",
-  author: "alexfiqure",
-  cooldowns: 5, // Lowered cooldown to 5 seconds
-  role: 0,
-  shortDescription: "Edit image with text prompt",
-  longDescription: "Edits an image using the provided text prompt and replied image",
-  category: "image",
-  guide: "{p}edit <prompt> (reply to image)"
-};
+module.exports = {
+  config: {
+    name: "edit",
+    aliases: ["imageedit", "imggen", "genedit"],
+    version: "1.0",
+    author: "TawsiN",
+    countDown: 5,
+    role: 0,
+    shortDescription: {
+      en: "Generate or edit an image using a prompt"
+    },
+    longDescription: {
+      en: "Use this command to generate a new image or edit an image you've replied to, using a text prompt.\n🧠 Powered by API from Rifat."
+    },
+    category: "image",
+    guide: {
+      en: "{p}edit <prompt> (reply to an image to edit)"
+    }
+  },
 
-module.exports.run = async function({ api, event, args }) {
-  if (!event.messageReply || !event.messageReply.attachments || event.messageReply.attachments.length === 0) {
-    return api.sendMessage(
-      "❌ | Please reply to an image with your prompt, like:\n{p}edit <prompt>",
-      event.threadID,
-      event.messageID
-    );
-  }
+  onStart: async function ({ message, event, args }) {
+    const prompt = args.join(" ");
+    const repliedAttachment = event.messageReply?.attachments?.[0];
+    const isEditing = repliedAttachment?.type === "photo";
 
-  const imageUrl = event.messageReply.attachments[0].url;
-  const prompt = args.join(" ");
+    if (!prompt) {
+      return message.reply("⚠️ Please provide a prompt to generate or edit an image.");
+    }
 
-  if (!prompt) {
-    return api.sendMessage("❌ | Please provide a text prompt for editing the image.", event.threadID, event.messageID);
-  }
+    const fileName = `edit_${Date.now()}.jpg`;
+    const filePath = path.join(__dirname, "cache", fileName);
 
-  api.sendMessage("🔄 | Editing your image, please wait...", event.threadID, event.messageID);
+    // React with ⏳ to indicate processing
+    await message.reaction("⏳");
 
-  try {
-    const editApiUrl = `http://193.149.164.141:9995/i/api/edit?url=${encodeURIComponent(imageUrl)}&txt=${encodeURIComponent(prompt)}`;
-    const response = await axios.get(editApiUrl, { responseType: "arraybuffer" });
+    try {
+      const baseURL = "https://edit-and-gen.onrender.com/gen";
+      const apiURL = isEditing
+        ? `${baseURL}?prompt=${encodeURIComponent(prompt)}&image=${encodeURIComponent(repliedAttachment.url)}`
+        : `${baseURL}?prompt=${encodeURIComponent(prompt)}`;
 
-    const cacheFolderPath = path.join(__dirname, "cache");
-    if (!fs.existsSync(cacheFolderPath)) {
-      fs.mkdirSync(cacheFolderPath);
-    }
-    const imagePath = path.join(cacheFolderPath, `${Date.now()}_edited_image.jpg`);
-    fs.writeFileSync(imagePath, Buffer.from(response.data, "binary"));
+      const response = await axios.get(apiURL, { responseType: "arraybuffer" });
+      await fs.ensureDir(path.dirname(filePath));
+      await fs.writeFile(filePath, Buffer.from(response.data, "binary"));
 
-    const stream = fs.createReadStream(imagePath);
-    api.sendMessage({
-      body: `✅ | Image edited with prompt: "${prompt}"`,
-      attachment: stream,
-    }, event.threadID, event.messageID);
-  } catch (error) {
-    console.error("Image edit error:", error);
-    api.sendMessage("❌ | An error occurred while editing the image. Please try again later.", event.threadID, event.messageID);
-  }
+      const statusText = isEditing ? "🪄 Edited" : "🎨 Generated";
+
+      await message.reply({
+        body: `${statusText} image for:\n📝 "${prompt}"`,
+        attachment: fs.createReadStream(filePath)
+      });
+
+      // React with ✅ on success
+      await message.reaction("✅");
+    } catch (err) {
+      console.error("[edit] Error:", err);
+      await message.reaction("❌");
+      await message.reply("❌ Failed to generate or edit image. Please try again later.");
+    } finally {
+      await fs.remove(filePath);
+    }
+  }
 };
