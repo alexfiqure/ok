@@ -2,18 +2,17 @@ const axios = require("axios");
 
 module.exports = {
   config: {
-    name: "4k",
-    aliases: ["upscale"],
+    name: "enhance",
     version: "1.1",
-    role: 0,
-    author: "mahim islam",
-    countDown: 5,
-    longDescription: "Upscale images to 4K resolution.",
+    hasPermission: 0,
+    credits: "mahim islam",
+    cooldowns: 5,
+    description: "Upscale images to 4K resolution.",
     category: "image",
-    guide: {
+    usages: {
       en: "${pn} reply to an image to upscale it to 4K resolution."
     }
-  },
+  };
 
   onStart: async function ({ message, event }) {
     if (
