@@ -11,13 +11,26 @@ const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 8080;
+const healthPort = process.env.HEALTH_PORT || 3000;
 
 // Serve the index.html file
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '/index.html'));
 });
 
-// Start the server and add error handling
+// ========= ADD UPTIME ROBOT HEALTH CHECK ========= //
+app.get('/health', function (req, res) {
+    res.status(200).json({
+        status: 'OK',
+        bot: 'ISLAMICK BOT - Running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        restarts: global.countRestart || 0,
+        memory: process.memoryUsage()
+    });
+});
+
+// Start the main server
 app.listen(port, () => {
     logger(`Server is running on port ${port}...`, "[ Starting ]");
 }).on('error', (err) => {
@@ -26,6 +39,23 @@ app.listen(port, () => {
     } else {
         logger(`Server error: ${err.message}`, "[ Error ]");
     }
+});
+
+// ========= START HEALTH CHECK SERVER ========= //
+const healthApp = express();
+
+healthApp.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'Bot is running', 
+        time: new Date().toISOString(),
+        restarts: global.countRestart || 0
+    });
+});
+
+healthApp.listen(healthPort, () => {
+    logger(`Health check server running on port ${healthPort}`, "[ Health ]");
+}).on('error', (err) => {
+    logger(`Health server error: ${err.message}`, "[ Health Error ]");
 });
 
 /////////////////////////////////////////////////////////
@@ -75,3 +105,6 @@ axios.get("https://raw.githubusercontent.com/cyber-ullash/cyber-bot/main/data.js
 
 // Start the bot
 startBot();
+
+logger(`Uptime Robot Health Check: http://localhost:${healthPort}/health`, "[ Setup ]");
+logger(`Dashboard: http://localhost:${port}`, "[ Setup ]");
