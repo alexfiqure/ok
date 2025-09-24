@@ -4,14 +4,17 @@
   "description": "made by 𝐂𝐘𝐁𝐄𝐑 ☢️_𖣘 -𝐁𝐎𝐓 ⚠️ 𝑻𝑬𝑨𝑴_☢️",
   "main": "Cyber.js",
   "engines": {
-      "node": "20.x",
-      "npm": "10.0.0"
+    "node": "20.x",
+    "npm": "10.0.0"
   },
   "scripts": {
-      "start": "node Ullash.js",
-      "login": "node login",
-      "test": "node --trace-warnings --use_strict --async-stack-traces mirai"
+    "start": "node Ullash.js",
+    "login": "node login",
+    "test": "node --trace-warnings --use_strict --async-stack-traces mirai",
+    "health": "node health-check.js"
   },
+  // ... rest of your package.json remains the same
+},
   "repository": {
       "type": "git",
       "url": "https://github.com/cyber-ullash/CYBER-BOT-COMMUNITY.git"
